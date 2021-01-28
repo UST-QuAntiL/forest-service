@@ -20,6 +20,7 @@ from time import sleep
 
 from pyquil import get_qc
 from pyquil.api import local_forest_runtime, ForestConnection
+import numpy as np
 
 def get_qpu(token, qpu_name):
     """Get backend."""
@@ -43,5 +44,15 @@ def delete_token():
 
 def execute_job(transpiled_circuit, shots, backend):
     """Genereate qObject from transpiled circuit and execute it. Return result."""
-    pass
 
+    stats = backend.run(transpiled_circuit)
+    width = stats.shape[-1]
+
+    def binary_string(x):
+        return np.binary_repr(np.packbits(x, bitorder='little')[0], width=width)
+
+
+    unique, counts = np.unique(stats, return_counts=True, axis=0)
+    stats = dict(zip(map(binary_string, unique), map(int,counts)))
+    print(stats)
+    return stats

@@ -26,7 +26,6 @@ import logging
 import json
 import base64
 
-
 def execute(impl_url, impl_data, impl_language, transpiled_qasm, input_params, token, qpu_name, shots):
     """Create database entry for result. Get implementation code, prepare it, and execute it. Save result in db"""
     job = get_current_job()
@@ -40,7 +39,8 @@ def execute(impl_url, impl_data, impl_language, transpiled_qasm, input_params, t
 
     logging.info('Preparing implementation...')
     if transpiled_qasm:
-        #transpiled_circuit = QuantumCircuit.from_qasm_str(transpiled_qasm)
+        # ToDo: implement transpiled quil
+        pass
     else:
         if impl_url:
             if impl_language.lower() == 'openqasm':
@@ -58,10 +58,13 @@ def execute(impl_url, impl_data, impl_language, transpiled_qasm, input_params, t
             result.result = json.dumps({'error': 'URL not found'})
             result.complete = True
             db.session.commit()
+
         logging.info('Start transpiling...')
         try:
-            transpiled_circuit = transpile(circuit, backend=backend, optimization_level=3)
-        except TranspilerError:
+            circuit.wrap_in_numshots_loop(shots=shots)
+            nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
+            transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
+        except Exception as e:
             result = Result.query.get(job.get_id())
             result.result = json.dumps({'error': 'too many qubits required'})
             result.complete = True
