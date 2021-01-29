@@ -20,13 +20,13 @@
 from app import implementation_handler, forest_handler, db
 from rq import get_current_job
 
-from app.NumpyEncoder import NumpyEncoder
+from pyquil import Program
 from app.result_model import Result
 import logging
 import json
 import base64
 
-def execute(impl_url, impl_data, impl_language, transpiled_qasm, input_params, token, qpu_name, shots):
+def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, token, qpu_name, shots):
     """Create database entry for result. Get implementation code, prepare it, and execute it. Save result in db"""
     job = get_current_job()
 
@@ -38,37 +38,44 @@ def execute(impl_url, impl_data, impl_language, transpiled_qasm, input_params, t
         db.session.commit()
 
     logging.info('Preparing implementation...')
-    if transpiled_qasm:
-        # ToDo: implement transpiled quil
-        pass
+    circuit = None
+    if transpiled_quil:
+        circuit = Program(transpiled_quil)
     else:
         if impl_url:
-            if impl_language.lower() == 'openqasm':
-                circuit = implementation_handler.prepare_code_from_qasm_url(impl_url)
+            if impl_language.lower() == 'quil':
+                circuit = implementation_handler.prepare_code_from_quil_url(impl_url)
             else:
                 circuit = implementation_handler.prepare_code_from_url(impl_url, input_params)
         elif impl_data:
             impl_data = base64.b64decode(impl_data.encode()).decode()
-            if impl_language.lower() == 'openqasm':
-                circuit = implementation_handler.prepare_code_from_qasm(impl_data)
+            if impl_language.lower() == 'quil':
+                circuit = implementation_handler.prepare_code_from_quil(impl_data)
             else:
                 circuit = implementation_handler.prepare_code_from_data(impl_data, input_params)
-        if not circuit:
-            result = Result.query.get(job.get_id())
-            result.result = json.dumps({'error': 'URL not found'})
-            result.complete = True
-            db.session.commit()
+    if not circuit:
+        result = Result.query.get(job.get_id())
+        result.result = json.dumps({'error': 'URL not found'})
+        result.complete = True
+        db.session.commit()
 
-        logging.info('Start transpiling...')
-        try:
-            circuit.wrap_in_numshots_loop(shots=shots)
+
+    logging.info('Start transpiling...')
+    try:
+
+        circuit.wrap_in_numshots_loop(shots=shots)
+
+        if not transpiled_quil:
             nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
-            transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
-        except Exception as e:
-            result = Result.query.get(job.get_id())
-            result.result = json.dumps({'error': 'too many qubits required'})
-            result.complete = True
-            db.session.commit()
+        else:
+            nq_program = circuit
+
+        transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
+    except Exception as e:
+        result = Result.query.get(job.get_id())
+        result.result = json.dumps({'error': 'too many qubits required'})
+        result.complete = True
+        db.session.commit()
 
     logging.info('Start executing...')
     job_result = forest_handler.execute_job(transpiled_circuit, shots, backend)

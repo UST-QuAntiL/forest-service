@@ -48,9 +48,9 @@ def transpile_circuit():
 
     if impl_url is not None and impl_url != "":
         impl_url = request.json['impl-url']
-        if impl_language.lower() == 'openqasm':
+        if impl_language.lower() == 'quil':
             short_impl_name = 'no name'
-            circuit = implementation_handler.prepare_code_from_qasm_url(impl_url)
+            circuit = implementation_handler.prepare_code_from_quil_url(impl_url)
         else:
             short_impl_name = "untitled"
             try:
@@ -61,8 +61,8 @@ def transpile_circuit():
     elif 'impl-data' in request.json:
         impl_data = base64.b64decode(request.json.get('impl-data').encode()).decode()
         short_impl_name = 'no short name'
-        if impl_language.lower() == 'openqasm':
-            circuit = implementation_handler.prepare_code_from_qasm(impl_data)
+        if impl_language.lower() == 'quil':
+            circuit = implementation_handler.prepare_code_from_quil(impl_data)
         else:
             try:
                 circuit = implementation_handler.prepare_code_from_data(impl_data, input_params)
@@ -103,7 +103,7 @@ def execute_circuit():
     impl_language = request.json.get('impl-language', '')
     impl_url = request.json.get('impl-url')
     impl_data = request.json.get('impl-data')
-    transpiled_qasm = request.json.get('transpiled-qasm')
+    transpiled_quil = request.json.get('transpiled-quil')
     input_params = request.json.get('input-params', "")
     input_params = parameters.ParameterDictionary(input_params)
     shots = request.json.get('shots', 1024)
@@ -115,7 +115,7 @@ def execute_circuit():
         abort(400)
 
     job = app.execute_queue.enqueue('app.tasks.execute', impl_url=impl_url, impl_data=impl_data,
-                                    impl_language=impl_language, transpiled_qasm=transpiled_qasm, qpu_name=qpu_name,
+                                    impl_language=impl_language, transpiled_quil=transpiled_quil, qpu_name=qpu_name,
                                     token=token, input_params=input_params, shots=shots)
     result = Result(id=job.get_id())
     db.session.add(result)

@@ -21,7 +21,7 @@ from urllib import request, error
 import tempfile
 import os, sys, shutil
 from importlib import reload
-
+from pyquil import Program
 
 
 
@@ -62,15 +62,15 @@ def prepare_code_from_url(url, input_params):
     return circuit
 
 
-def prepare_code_from_qasm(qasm):
-    pass
+def prepare_code_from_quil(quil):
+    return Program(quil)
 
 
-def prepare_code_from_qasm_url(url):
+def prepare_code_from_quil_url(url):
     """Get implementation code from URL. Set input parameters into implementation. Return circuit."""
     try:
         impl = request.urlopen(url).read().decode("utf-8")
     except (error.HTTPError, error.URLError):
         return None
 
-    return prepare_code_from_qasm(impl)
+    return prepare_code_from_quil(impl)
