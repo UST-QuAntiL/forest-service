@@ -21,6 +21,12 @@ from time import sleep
 from pyquil import get_qc
 from pyquil.api import local_forest_runtime, ForestConnection
 import numpy as np
+import os
+
+qvm_hostname = os.environ.get('QVM_HOSTNAME', default='localhost')
+qvm_port = os.environ.get('QVM_PORT', default=5666)
+quilc_hostname = os.environ.get('QUILC_HOSTNAME', default= 'localhost')
+quilc_port = os.environ.get('QVM_PORT', default=5667)
 
 def get_qpu(token, qpu_name):
     """Get backend."""
