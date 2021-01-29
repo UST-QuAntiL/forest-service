@@ -11,7 +11,7 @@ COPY . /app
 
 EXPOSE 5000/tcp
 
-ENV FLASK_APP=qiskit-service.py
+ENV FLASK_APP=forest-service.py
 ENV FLASK_ENV=development
 ENV FLASK_DEBUG=0
 RUN echo "python -m flask db upgrade" > /app/startup.sh
