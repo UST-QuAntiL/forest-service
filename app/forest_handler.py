@@ -23,6 +23,7 @@ from pyquil.api import local_forest_runtime, ForestConnection
 import numpy as np
 import os
 
+# Get environment variables
 qvm_hostname = os.environ.get('QVM_HOSTNAME', default='localhost')
 qvm_port = os.environ.get('QVM_PORT', default=5666)
 quilc_hostname = os.environ.get('QUILC_HOSTNAME', default= 'localhost')
@@ -33,8 +34,8 @@ def get_qpu(token, qpu_name):
 
     # Create a connection to the forest SDK
     connection = ForestConnection(
-        sync_endpoint="http://localhost:5666",
-        compiler_endpoint="tcp://localhost:5667")
+        sync_endpoint=f"http://{qvm_hostname}:{qvm_port}",
+        compiler_endpoint=f"tcp://{quilc_hostname}:{quilc_port}")
 
     # Get Quantum computer as Quantum Virtual Machine
     return get_qc(name=qpu_name,
