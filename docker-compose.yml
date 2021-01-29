@@ -10,8 +10,8 @@ services:
       - "6379:6379"
     networks:
       - default
-  qiskit-service:
-    image: planqk/qiskit-service:latest
+  forest-service:
+    image: planqk/forest-service:latest
     command: sh /app/startup.sh
     ports:
       - "5000:5000"
@@ -24,8 +24,8 @@ services:
       - default
 
   rq-worker:
-    image: planqk/qiskit-service:latest
-    command: rq worker --url redis://redis qiskit-service_execute
+    image: planqk/forest-service:latest
+    command: rq worker --url redis://redis forest-service_execute
     environment:
       - REDIS_URL=redis://redis
       - DATABASE_URL=sqlite:////data/app.db
@@ -36,13 +36,17 @@ services:
     deploy:
       replicas: 4
 
-  
-  rq-dashboard:
-    image: eoranged/rq-dashboard
+  rigetti-qvm:
+    image: rigetti/qvm
     ports:
-      - "9181:9181"
-    environment:
-      - RQ_DASHBOARD_REDIS_URL=redis://redis:6379
+      - "5666:5666"
+    command: -S -p 5666
+
+  forest-quilc:
+    image: rigetti/quilc
+    ports:
+      - "5667:5667"
+    command: -S -p 5667
 
 networks:
   default:
