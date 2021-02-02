@@ -14,7 +14,7 @@ services:
     image: planqk/forest-service:latest
     command: sh /app/startup.sh
     ports:
-      - "5000:5000"
+      - "5002:5000"
     environment:
       - REDIS_URL=redis://redis
       - DATABASE_URL=sqlite:////data/app.db
