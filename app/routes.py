@@ -39,12 +39,14 @@ def transpile_circuit():
     input_params = request.json.get('input-params', "")
     impl_url = request.json.get('impl-url', "")
     input_params = parameters.ParameterDictionary(input_params)
-    if 'token' in input_params:
-        token = input_params['token']
-    elif 'token' in request.json:
-        token = request.json.get('token')
-    else:
-        abort(400)
+    # adapt if real backends are available
+    token = ''
+    # if 'token' in input_params:
+    #     token = input_params['token']
+    # elif 'token' in request.json:
+    #     token = request.json.get('token')
+    # else:
+    #     abort(400)
 
     if impl_url is not None and impl_url != "":
         impl_url = request.json['impl-url']
