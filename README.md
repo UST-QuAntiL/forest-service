@@ -54,9 +54,12 @@ Send implementation, input, and QPU information to the API to get depth and widt
             "rawValue": "YOUR-VALUE-2",
             "type": "String"
         }
-    }
+    },
+    "bearer-token": "YOUR-BEARER-TOKEN"
 }
 ```
+
+You only need to specify a bearer token if the url is from the PlanQK platform.
 #### Transpilation via data
 ```
 {  
@@ -96,9 +99,12 @@ Send implementation, input, and QPU information to the API to execute your circu
             "rawValue": "YOUR-VALUE-2",
             "type": "String"
         }
-    }
+    },
+    "bearer-token": "YOUR-BEARER-TOKEN"
 }
 ```
+You only need to specify a bearer token if the url is from the PlanQK platform.
+
 #### Execution via data
 ```
 {  
