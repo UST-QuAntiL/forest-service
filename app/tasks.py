@@ -26,7 +26,7 @@ import logging
 import json
 import base64
 
-def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, token, qpu_name, shots):
+def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, token, qpu_name, shots, bearer_token: str):
     """Create database entry for result. Get implementation code, prepare it, and execute it. Save result in db"""
     job = get_current_job()
 
@@ -44,9 +44,9 @@ def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, t
     else:
         if impl_url:
             if impl_language.lower() == 'quil':
-                circuit = implementation_handler.prepare_code_from_quil_url(impl_url)
+                circuit = implementation_handler.prepare_code_from_quil_url(impl_url, bearer_token)
             else:
-                circuit = implementation_handler.prepare_code_from_url(impl_url, input_params)
+                circuit = implementation_handler.prepare_code_from_url(impl_url, input_params, bearer_token)
         elif impl_data:
             impl_data = base64.b64decode(impl_data.encode()).decode()
             if impl_language.lower() == 'quil':
