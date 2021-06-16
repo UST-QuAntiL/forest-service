@@ -17,7 +17,7 @@
 #  limitations under the License.
 # ******************************************************************************
 
-from app import implementation_handler, forest_handler, db
+from app import implementation_handler, forest_handler, db, app
 from rq import get_current_job
 
 from pyquil import Program
