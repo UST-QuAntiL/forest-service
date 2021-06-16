@@ -18,7 +18,7 @@ docker-compose pull
 docker-compose up
 ```
 
-Now the forest-service is available on http://localhost:5002/.
+Now the forest-service is available on http://localhost:5014/.
 
 ## After implementation changes
 * Update container:
