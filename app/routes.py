@@ -22,7 +22,6 @@ from app.result_model import Result
 from flask import jsonify, abort, request
 import logging
 import json
-import re
 import base64
 
 
@@ -86,15 +85,24 @@ def transpile_circuit():
         width = len(nq_program.get_qubits())
         # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
         depth = nq_program.native_quil_metadata.gate_depth
+        total_number_of_gates = nq_program.native_quil_metadata.gate_volume
+        number_of_multi_qubit_gates = nq_program.native_quil_metadata.multiqubit_gate_depth
 
-        print(f"Transpiled width {width} & transpiled depth {depth}")
-
-    except Exception as e:
+    except Exception:
         app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
         return jsonify({'error': 'too many qubits required'}), 200
 
-    app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: w={width} d={depth}")
-    return jsonify({'depth': depth, 'width': width, 'transpiled-quil': transpiled_circuit.program}), 200
+    app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: "
+                    f"w={width}, "
+                    f"d={depth}, "
+                    f"total number of gates={total_number_of_gates}, "
+                    f"number of multi qubit gates={number_of_multi_qubit_gates}")
+
+    return jsonify({'depth': depth,
+                    'width': width,
+                    'number-of-gates': total_number_of_gates,
+                    'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
+                    'transpiled-quil': transpiled_circuit.program}), 200
 
 
 @app.route('/forest-service/api/v1.0/execute', methods=['POST'])

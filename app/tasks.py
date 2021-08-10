@@ -17,7 +17,7 @@
 #  limitations under the License.
 # ******************************************************************************
 
-from app import implementation_handler, forest_handler, db, app
+from app import implementation_handler, forest_handler, db
 from rq import get_current_job
 
 from pyquil import Program
@@ -25,6 +25,7 @@ from app.result_model import Result
 import logging
 import json
 import base64
+
 
 def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, token, qpu_name, shots, bearer_token: str):
     """Create database entry for result. Get implementation code, prepare it, and execute it. Save result in db"""
@@ -59,10 +60,8 @@ def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, t
         result.complete = True
         db.session.commit()
 
-
     logging.info('Start transpiling...')
     try:
-
         circuit.wrap_in_numshots_loop(shots=shots)
 
         if not transpiled_quil:
@@ -71,7 +70,7 @@ def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, t
             nq_program = circuit
 
         transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
-    except Exception as e:
+    except Exception:
         result = Result.query.get(job.get_id())
         result.result = json.dumps({'error': 'too many qubits required'})
         result.complete = True
@@ -89,4 +88,3 @@ def execute(impl_url, impl_data, impl_language, transpiled_quil, input_params, t
         result.result = json.dumps({'error': 'execution failed'})
         result.complete = True
         db.session.commit()
-
