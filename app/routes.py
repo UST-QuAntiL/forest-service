@@ -23,6 +23,7 @@ from flask import jsonify, abort, request
 import logging
 import json
 import base64
+import re
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
@@ -82,11 +83,16 @@ def transpile_circuit():
         nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
         transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
 
+        # count number of multi qubit gates
+        program_string = transpiled_circuit.program
+        multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'
+        number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
+
         width = len(nq_program.get_qubits())
         # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
         depth = nq_program.native_quil_metadata.gate_depth
         total_number_of_gates = nq_program.native_quil_metadata.gate_volume
-        number_of_multi_qubit_gates = nq_program.native_quil_metadata.multiqubit_gate_depth
+        print(nq_program.native_quil_metadata)
 
     except Exception:
         app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
