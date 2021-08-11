@@ -91,6 +91,8 @@ def transpile_circuit():
         width = len(nq_program.get_qubits())
         # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
         depth = nq_program.native_quil_metadata.gate_depth
+        # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
+        multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
         total_number_of_gates = nq_program.native_quil_metadata.gate_volume
         print(nq_program.native_quil_metadata)
 
@@ -102,9 +104,11 @@ def transpile_circuit():
                     f"w={width}, "
                     f"d={depth}, "
                     f"total number of gates={total_number_of_gates}, "
-                    f"number of multi qubit gates={number_of_multi_qubit_gates}")
+                    f"number of multi qubit gates={number_of_multi_qubit_gates}, "
+                    f"multi qubit gate depth={multi_qubit_gate_depth}")
 
     return jsonify({'depth': depth,
+                    'multi-qubit-gate-depth': multi_qubit_gate_depth,
                     'width': width,
                     'number-of-gates': total_number_of_gates,
                     'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
