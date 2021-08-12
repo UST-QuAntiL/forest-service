@@ -1,6 +1,6 @@
 # forest-service
 
-This service takes a PyQuil or Quil implementation as data or via an URL and returns either its depth, width and the transpiled Quil String (Transpilation Request) or its results (Execution Request) depending on the input data and selected backend.
+This service takes a PyQuil or Quil implementation as data or via an URL and returns either its depth, multi-qubit-gate depth, number of gates, number of multi-qubit gates, width, and the transpiled Quil String (Transpilation Request) or its results (Execution Request) depending on the input data and selected backend.
 
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -34,7 +34,7 @@ docker-compose up
 ```
 
 ## Transpilation Request
-Send implementation, input, and QPU information to the API to get depth and width of the transpiled circuit and the transpiled Quil circuit itself.
+Send implementation, input, and QPU information to the API to get depth, multi-qubit-gate depth, number of gates, number of multi-qubit gates, and width of the transpiled circuit and the transpiled Quil circuit itself.
 *Note*: Currently, only the QVM is used for simulation. Thus, no real backends are accessible.
 
 `POST /forest-service/api/v1.0/transpile`  
