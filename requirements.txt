@@ -11,4 +11,4 @@ urllib3==1.25.9
 Werkzeug==1.0.1
 numpy~=1.19.0
 gunicorn
-pyquil
+pyquil~=2.28.0

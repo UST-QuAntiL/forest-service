@@ -22,8 +22,8 @@ from app.result_model import Result
 from flask import jsonify, abort, request
 import logging
 import json
-import re
 import base64
+import re
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
@@ -83,18 +83,36 @@ def transpile_circuit():
         nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
         transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
 
+        # count number of multi qubit gates
+        program_string = transpiled_circuit.program
+        multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'
+        number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
+
         width = len(nq_program.get_qubits())
         # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
         depth = nq_program.native_quil_metadata.gate_depth
+        # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
+        multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
+        total_number_of_gates = nq_program.native_quil_metadata.gate_volume
+        print(nq_program.native_quil_metadata)
 
-        print(f"Transpiled width {width} & transpiled depth {depth}")
-
-    except Exception as e:
+    except Exception:
         app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
         return jsonify({'error': 'too many qubits required'}), 200
 
-    app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: w={width} d={depth}")
-    return jsonify({'depth': depth, 'width': width, 'transpiled-quil': transpiled_circuit.program}), 200
+    app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: "
+                    f"w={width}, "
+                    f"d={depth}, "
+                    f"total number of gates={total_number_of_gates}, "
+                    f"number of multi qubit gates={number_of_multi_qubit_gates}, "
+                    f"multi qubit gate depth={multi_qubit_gate_depth}")
+
+    return jsonify({'depth': depth,
+                    'multi-qubit-gate-depth': multi_qubit_gate_depth,
+                    'width': width,
+                    'number-of-gates': total_number_of_gates,
+                    'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
+                    'transpiled-quil': transpiled_circuit.program}), 200
 
 
 @app.route('/forest-service/api/v1.0/execute', methods=['POST'])
