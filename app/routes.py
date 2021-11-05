@@ -88,12 +88,27 @@ def transpile_circuit():
         multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'
         number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
 
+        # count number of measurement operations
+        program_string = transpiled_circuit.program
+        print(transpiled_circuit.program)
+        measurement_operations_regex = 'MEASURE'
+        number_of_measurement_operations = len([*re.finditer(measurement_operations_regex, program_string)])
+
         width = len(nq_program.get_qubits())
+
         # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
         depth = nq_program.native_quil_metadata.gate_depth
+
         # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
         multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
+
         total_number_of_gates = nq_program.native_quil_metadata.gate_volume
+        # count number of single qubit gates
+        number_of_single_qubit_gates = total_number_of_gates - number_of_multi_qubit_gates
+
+        # count total number of all operations including gates and measurement operations
+        total_number_of_operations = total_number_of_gates + number_of_measurement_operations
+
         print(nq_program.native_quil_metadata)
 
     except Exception:
@@ -103,15 +118,19 @@ def transpile_circuit():
     app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: "
                     f"w={width}, "
                     f"d={depth}, "
-                    f"total number of gates={total_number_of_gates}, "
+                    f"total number of operations={total_number_of_operations}, "
+                    f"number of single qubit gates={number_of_single_qubit_gates}, "
                     f"number of multi qubit gates={number_of_multi_qubit_gates}, "
+                    f"number of measurement operations={number_of_measurement_operations}, "
                     f"multi qubit gate depth={multi_qubit_gate_depth}")
 
     return jsonify({'depth': depth,
                     'multi-qubit-gate-depth': multi_qubit_gate_depth,
                     'width': width,
-                    'number-of-gates': total_number_of_gates,
+                    'total-number-of-operations': total_number_of_operations,
+                    'number-of-single-qubit-gates': number_of_single_qubit_gates,
                     'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
+                    'number-of-measurement-operations': number_of_measurement_operations,
                     'transpiled-quil': transpiled_circuit.program}), 200
 
 
