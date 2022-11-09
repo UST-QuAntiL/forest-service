@@ -3,7 +3,7 @@ from unittest import TestCase
 from pyquil import Program
 from pyquil.gates import MEASURE, H, CNOT
 
-from app.routes import get_non_transpiled_circuit_metrics
+from app.analysis import get_non_transpiled_circuit_metrics
 
 
 def circuit1() -> Program:
