@@ -20,6 +20,8 @@ from typing import Dict
 
 from pyquil import Program
 from pyquil.api import QuantumComputer
+from pyquil.device import Qubit
+from pyquil.quilbase import Measurement
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.result_model import Result
@@ -46,22 +48,32 @@ def get_non_transpiled_circuit_metrics(non_compiled_circuit: Program) -> Dict:
 
     non_transpiled_width = len(non_compiled_circuit.get_qubits())
 
-    # analyze depth of original circuit TODO --> multi-qubit gates must be counted right
-    counts = {}
-    for instruction in non_compiled_circuit.instructions[1:]:
-        if hasattr(instruction, 'qubits'):
-            for qubit in instruction.qubits:
-                if qubit in counts:
-                    counts[qubit] += 1
-                else:
-                    counts[qubit] = 1
-        elif hasattr(instruction, 'qubit'):
-            if instruction.qubit in counts:
-                counts[instruction.qubit] += 1
-            else:
-                counts[instruction.qubit] = 1
+    # analyze depth of original circuit
+    depths: Dict[Qubit, int] = {}
 
-    non_transpiled_depth = counts[max(counts, key=counts.get)]
+    for qubit in non_compiled_circuit.get_qubits(False):
+        depths[qubit] = 0
+
+    for instruction in non_compiled_circuit.instructions[1:]:
+        if isinstance(instruction, Measurement):
+            continue
+
+        if hasattr(instruction, 'qubits'):
+            if len(instruction.qubits) == 1:
+                for qubit in instruction.qubits:
+                    depths[qubit] += 1
+            else:
+                max_depth_of_effected_qubits = 0
+
+                for qubit in instruction.qubits:
+                    max_depth_of_effected_qubits = max(max_depth_of_effected_qubits, depths[qubit])
+
+                for qubit in instruction.qubits:
+                    depths[qubit] = max_depth_of_effected_qubits + 1
+        else:
+            raise KeyError(f"Instruction {instruction} has no attribute named 'qubits'")
+
+    non_transpiled_depth = depths[max(depths, key=depths.get)]
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
     non_transpiled_multi_qubit_gate_depth = 0  # TODO
