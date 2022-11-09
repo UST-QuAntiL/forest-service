@@ -1,5 +1,5 @@
 # ******************************************************************************
-#  Copyright (c) 2021 University of Stuttgart
+#  Copyright (c) 2022 University of Stuttgart
 #
 #  See the NOTICE file(s) distributed with this work for additional
 #  information regarding copyright ownership.
@@ -19,11 +19,50 @@
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.result_model import Result
+from app.analysis import get_circuit_metrics, get_non_transpiled_circuit_metrics
 from flask import jsonify, abort, request
 import logging
 import json
 import base64
-import re
+
+
+@app.route('/forest-service/api/v1.0/analyze-original-circuit', methods=['POST'])
+def analyze_original_circuit():
+    impl_language = request.json.get('impl-language', '')
+    input_params = request.json.get('input-params', "")
+    impl_url = request.json.get('impl-url', "")
+    bearer_token = request.json.get("bearer-token", "")
+    input_params = parameters.ParameterDictionary(input_params)
+
+    if impl_url is not None and impl_url != "":
+        impl_url = request.json['impl-url']
+        if impl_language.lower() == 'quil':
+            circuit = implementation_handler.prepare_code_from_quil_url(impl_url, bearer_token)
+        else:
+            try:
+                circuit = implementation_handler.prepare_code_from_url(impl_url, input_params, bearer_token)
+            except ValueError:
+                abort(400)
+
+    elif 'impl-data' in request.json:
+        impl_data = base64.b64decode(request.json.get('impl-data').encode()).decode()
+        if impl_language.lower() == 'quil':
+            circuit = implementation_handler.prepare_code_from_quil(impl_data)
+        else:
+            try:
+                circuit = implementation_handler.prepare_code_from_data(impl_data, input_params)
+            except ValueError:
+                abort(400)
+    else:
+        abort(400)
+
+    try:
+        metrics = get_non_transpiled_circuit_metrics(circuit)
+
+    except Exception:
+        return jsonify({'error': 'analysis failed'}), 200
+
+    return jsonify(metrics), 200
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
@@ -80,58 +119,13 @@ def transpile_circuit():
         abort(404)
 
     try:
-        nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
-        transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
-
-        # count number of multi qubit gates
-        program_string = transpiled_circuit.program
-        multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'
-        number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
-
-        # count number of measurement operations
-        program_string = transpiled_circuit.program
-        print(transpiled_circuit.program)
-        measurement_operations_regex = 'MEASURE'
-        number_of_measurement_operations = len([*re.finditer(measurement_operations_regex, program_string)])
-
-        width = len(nq_program.get_qubits())
-
-        # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
-        depth = nq_program.native_quil_metadata.gate_depth
-
-        # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
-        multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
-
-        total_number_of_gates = nq_program.native_quil_metadata.gate_volume
-        # count number of single qubit gates
-        number_of_single_qubit_gates = total_number_of_gates - number_of_multi_qubit_gates
-
-        # count total number of all operations including gates and measurement operations
-        total_number_of_operations = total_number_of_gates + number_of_measurement_operations
-
-        print(nq_program.native_quil_metadata)
+        metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
 
     except Exception:
         app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
         return jsonify({'error': 'too many qubits required'}), 200
 
-    app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: "
-                    f"w={width}, "
-                    f"d={depth}, "
-                    f"total number of operations={total_number_of_operations}, "
-                    f"number of single qubit gates={number_of_single_qubit_gates}, "
-                    f"number of multi qubit gates={number_of_multi_qubit_gates}, "
-                    f"number of measurement operations={number_of_measurement_operations}, "
-                    f"multi qubit gate depth={multi_qubit_gate_depth}")
-
-    return jsonify({'depth': depth,
-                    'multi-qubit-gate-depth': multi_qubit_gate_depth,
-                    'width': width,
-                    'total-number-of-operations': total_number_of_operations,
-                    'number-of-single-qubit-gates': number_of_single_qubit_gates,
-                    'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
-                    'number-of-measurement-operations': number_of_measurement_operations,
-                    'transpiled-quil': transpiled_circuit.program}), 200
+    return jsonify(metrics), 200
 
 
 @app.route('/forest-service/api/v1.0/execute', methods=['POST'])
