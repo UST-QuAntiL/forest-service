@@ -19,11 +19,50 @@
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.result_model import Result
-from app.analysis import get_circuit_metrics
+from app.analysis import get_circuit_metrics, get_non_transpiled_circuit_metrics
 from flask import jsonify, abort, request
 import logging
 import json
 import base64
+
+
+@app.route('/forest-service/api/v1.0/analyze-original-circuit', methods=['POST'])
+def analyze_original_circuit():
+    impl_language = request.json.get('impl-language', '')
+    input_params = request.json.get('input-params', "")
+    impl_url = request.json.get('impl-url', "")
+    bearer_token = request.json.get("bearer-token", "")
+    input_params = parameters.ParameterDictionary(input_params)
+
+    if impl_url is not None and impl_url != "":
+        impl_url = request.json['impl-url']
+        if impl_language.lower() == 'quil':
+            circuit = implementation_handler.prepare_code_from_quil_url(impl_url, bearer_token)
+        else:
+            try:
+                circuit = implementation_handler.prepare_code_from_url(impl_url, input_params, bearer_token)
+            except ValueError:
+                abort(400)
+
+    elif 'impl-data' in request.json:
+        impl_data = base64.b64decode(request.json.get('impl-data').encode()).decode()
+        if impl_language.lower() == 'quil':
+            circuit = implementation_handler.prepare_code_from_quil(impl_data)
+        else:
+            try:
+                circuit = implementation_handler.prepare_code_from_data(impl_data, input_params)
+            except ValueError:
+                abort(400)
+    else:
+        abort(400)
+
+    try:
+        metrics = get_non_transpiled_circuit_metrics(circuit)
+
+    except Exception:
+        return jsonify({'error': 'analysis failed'}), 200
+
+    return jsonify(metrics), 200
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
