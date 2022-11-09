@@ -36,25 +36,13 @@ multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|S
 measurement_operations_regex = 'MEASURE'
 
 
-def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
-    non_transpiled_circuit_program_string = str(non_transpiled_circuit)
-    non_transpiled_number_of_multi_qubit_gates = len(
-        [*re.finditer(multi_qubit_gates_regex, non_transpiled_circuit_program_string)])
-
-    non_transpiled_number_of_measurement_operations = len(
-        [*re.finditer(
-            measurement_operations_regex,
-            non_transpiled_circuit_program_string)])
-
-    non_transpiled_width = len(non_transpiled_circuit.get_qubits())
-
-    # analyze depth of original circuit
+def get_circuit_depth(circuit: Program):
     depths: Dict[Qubit, int] = {}
 
-    for qubit in non_transpiled_circuit.get_qubits(False):
+    for qubit in circuit.get_qubits(False):
         depths[qubit] = 0
 
-    for instruction in non_transpiled_circuit.instructions[1:]:
+    for instruction in circuit.instructions[1:]:
         if isinstance(instruction, Measurement):
             continue
 
@@ -73,7 +61,23 @@ def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
         else:
             raise KeyError(f"Instruction {instruction} has no attribute named 'qubits'")
 
-    non_transpiled_depth = max(depths.values())
+    return max(depths.values())
+
+
+def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
+    non_transpiled_circuit_program_string = str(non_transpiled_circuit)
+    non_transpiled_number_of_multi_qubit_gates = len(
+        [*re.finditer(multi_qubit_gates_regex, non_transpiled_circuit_program_string)])
+
+    non_transpiled_number_of_measurement_operations = len(
+        [*re.finditer(
+            measurement_operations_regex,
+            non_transpiled_circuit_program_string)])
+
+    non_transpiled_width = len(non_transpiled_circuit.get_qubits())
+
+    # analyze depth of original circuit
+    non_transpiled_depth = get_circuit_depth(non_transpiled_circuit)
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
     non_transpiled_multi_qubit_gate_depth = 0  # TODO
