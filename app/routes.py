@@ -73,7 +73,7 @@ def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
         else:
             raise KeyError(f"Instruction {instruction} has no attribute named 'qubits'")
 
-    non_transpiled_depth = depths[max(depths, key=depths.get)]
+    non_transpiled_depth = max(depths.values())
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
     non_transpiled_multi_qubit_gate_depth = 0  # TODO
