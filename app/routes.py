@@ -21,7 +21,7 @@ from typing import Dict
 from pyquil import Program
 from pyquil.api import QuantumComputer
 from pyquil.device import Qubit
-from pyquil.quilbase import Measurement
+from pyquil.quilbase import Measurement, Gate
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.result_model import Result
@@ -64,6 +64,19 @@ def get_circuit_depth(circuit: Program):
     return max(depths.values())
 
 
+def remove_single_qubit_gates(circuit: Program) -> Program:
+    multi_qubit_circuit = circuit.copy_everything_except_instructions()
+
+    for inst in circuit.instructions:
+        if isinstance(inst, Gate):
+            if len(inst.qubits) > 1:
+                multi_qubit_circuit.inst(inst)
+        else:
+            multi_qubit_circuit.inst(inst)
+
+    return multi_qubit_circuit
+
+
 def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
     non_transpiled_circuit_program_string = str(non_transpiled_circuit)
     non_transpiled_number_of_multi_qubit_gates = len(
@@ -80,7 +93,8 @@ def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
     non_transpiled_depth = get_circuit_depth(non_transpiled_circuit)
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
-    non_transpiled_multi_qubit_gate_depth = 0  # TODO
+    multi_qubit_circuit = remove_single_qubit_gates(non_transpiled_circuit)
+    non_transpiled_multi_qubit_gate_depth = get_circuit_depth(multi_qubit_circuit)
 
     # total number of gates for non-transpiled circuit
     non_transpiled_total_number_of_gates = 0
@@ -96,6 +110,7 @@ def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
 
     return {
         'original-depth': non_transpiled_depth,
+        'original-multi-qubit-gate-depth': non_transpiled_multi_qubit_gate_depth,
         'original-width': non_transpiled_width,
         'original-total-number-of-operations': non_transpiled_total_number_of_operations,
         'original-number-of-multi-qubit-gates': non_transpiled_number_of_multi_qubit_gates,

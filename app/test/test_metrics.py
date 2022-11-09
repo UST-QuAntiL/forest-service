@@ -56,6 +56,7 @@ class TestNonTranspiledMetrics(TestCase):
 			get_non_transpiled_circuit_metrics(circuit1()),
 			{
 				'original-depth': 2,
+				'original-multi-qubit-gate-depth': 0,
 				'original-width': 2,
 				'original-total-number-of-operations': 5,
 				'original-number-of-multi-qubit-gates': 0,
@@ -69,6 +70,7 @@ class TestNonTranspiledMetrics(TestCase):
 			get_non_transpiled_circuit_metrics(circuit2()),
 			{
 				'original-depth': 6,
+				'original-multi-qubit-gate-depth': 1,
 				'original-width': 2,
 				'original-total-number-of-operations': 8,
 				'original-number-of-multi-qubit-gates': 1,
@@ -82,6 +84,7 @@ class TestNonTranspiledMetrics(TestCase):
 			get_non_transpiled_circuit_metrics(circuit3()),
 			{
 				'original-depth': 4,
+				'original-multi-qubit-gate-depth': 2,
 				'original-width': 3,
 				'original-total-number-of-operations': 8,
 				'original-number-of-multi-qubit-gates': 2,
