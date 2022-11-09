@@ -36,25 +36,25 @@ multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|S
 measurement_operations_regex = 'MEASURE'
 
 
-def get_non_transpiled_circuit_metrics(non_compiled_circuit: Program) -> Dict:
-    non_compiled_circuit_program_string = str(non_compiled_circuit)
+def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
+    non_transpiled_circuit_program_string = str(non_transpiled_circuit)
     non_transpiled_number_of_multi_qubit_gates = len(
-        [*re.finditer(multi_qubit_gates_regex, non_compiled_circuit_program_string)])
+        [*re.finditer(multi_qubit_gates_regex, non_transpiled_circuit_program_string)])
 
     non_transpiled_number_of_measurement_operations = len(
         [*re.finditer(
             measurement_operations_regex,
-            non_compiled_circuit_program_string)])
+            non_transpiled_circuit_program_string)])
 
-    non_transpiled_width = len(non_compiled_circuit.get_qubits())
+    non_transpiled_width = len(non_transpiled_circuit.get_qubits())
 
     # analyze depth of original circuit
     depths: Dict[Qubit, int] = {}
 
-    for qubit in non_compiled_circuit.get_qubits(False):
+    for qubit in non_transpiled_circuit.get_qubits(False):
         depths[qubit] = 0
 
-    for instruction in non_compiled_circuit.instructions[1:]:
+    for instruction in non_transpiled_circuit.instructions[1:]:
         if isinstance(instruction, Measurement):
             continue
 
@@ -80,7 +80,7 @@ def get_non_transpiled_circuit_metrics(non_compiled_circuit: Program) -> Dict:
 
     # total number of gates for non-transpiled circuit
     non_transpiled_total_number_of_gates = 0
-    for instruction in non_compiled_circuit.instructions[1:]:
+    for instruction in non_transpiled_circuit.instructions[1:]:
         if hasattr(instruction, 'qubits'):
             non_transpiled_total_number_of_gates += 1
 
@@ -101,7 +101,7 @@ def get_non_transpiled_circuit_metrics(non_compiled_circuit: Program) -> Dict:
 
 
 def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_name: str, qpu_name: str) -> Dict:
-    non_compiled_circuit = circuit
+    non_transpiled_circuit = circuit
     nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
     transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
 
@@ -140,7 +140,7 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         f"number of measurement operations={number_of_measurement_operations}, "
         f"multi qubit gate depth={multi_qubit_gate_depth}")
 
-    compiled_metrics = {
+    transpiled_metrics = {
         #'original-multi-qubit-gate-depth': non_transpiled_multi_qubit_gate_depth,
         'depth': depth,
         'multi-qubit-gate-depth': multi_qubit_gate_depth,
@@ -152,7 +152,7 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         'transpiled-quil': transpiled_circuit.program
     }
 
-    return compiled_metrics | get_non_transpiled_circuit_metrics(non_compiled_circuit)
+    return transpiled_metrics | get_non_transpiled_circuit_metrics(non_transpiled_circuit)
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
