@@ -77,45 +77,59 @@ def remove_single_qubit_gates(circuit: Program) -> Program:
     return multi_qubit_circuit
 
 
+def get_number_of_multi_qubit_gates(circuit: Program) -> int:
+    multi_qubit_gates = 0
+
+    for inst in circuit.instructions:
+        if hasattr(inst, "qubits"):
+            if len(inst.qubits) > 1:
+                multi_qubit_gates += 1
+
+    return multi_qubit_gates
+
+
+def get_number_of_measurement_operations(circuit: Program) -> int:
+    number_of_measurement_operations = 0
+
+    for inst in circuit.instructions:
+        if isinstance(inst, Measurement):
+            number_of_measurement_operations += 1
+
+    return number_of_measurement_operations
+
+
 def get_non_transpiled_circuit_metrics(non_transpiled_circuit: Program) -> Dict:
-    non_transpiled_circuit_program_string = str(non_transpiled_circuit)
-    non_transpiled_number_of_multi_qubit_gates = len(
-        [*re.finditer(multi_qubit_gates_regex, non_transpiled_circuit_program_string)])
-
-    non_transpiled_number_of_measurement_operations = len(
-        [*re.finditer(
-            measurement_operations_regex,
-            non_transpiled_circuit_program_string)])
-
-    non_transpiled_width = len(non_transpiled_circuit.get_qubits())
+    number_of_multi_qubit_gates = get_number_of_multi_qubit_gates(non_transpiled_circuit)
+    number_of_measurement_operations = get_number_of_measurement_operations(non_transpiled_circuit)
+    width = len(non_transpiled_circuit.get_qubits())
 
     # analyze depth of original circuit
-    non_transpiled_depth = get_circuit_depth(non_transpiled_circuit)
+    depth = get_circuit_depth(non_transpiled_circuit)
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
     multi_qubit_circuit = remove_single_qubit_gates(non_transpiled_circuit)
-    non_transpiled_multi_qubit_gate_depth = get_circuit_depth(multi_qubit_circuit)
+    multi_qubit_gate_depth = get_circuit_depth(multi_qubit_circuit)
 
     # total number of gates for non-transpiled circuit
-    non_transpiled_total_number_of_gates = 0
+    total_number_of_gates = 0
     for instruction in non_transpiled_circuit.instructions[1:]:
         if hasattr(instruction, 'qubits'):
-            non_transpiled_total_number_of_gates += 1
+            total_number_of_gates += 1
 
-    non_transpiled_number_of_single_qubit_gates = non_transpiled_total_number_of_gates\
-        - non_transpiled_number_of_multi_qubit_gates
+    number_of_single_qubit_gates = total_number_of_gates\
+        - number_of_multi_qubit_gates
 
-    non_transpiled_total_number_of_operations = non_transpiled_total_number_of_gates \
-        + non_transpiled_number_of_measurement_operations
+    total_number_of_operations = total_number_of_gates \
+        + number_of_measurement_operations
 
     return {
-        'original-depth': non_transpiled_depth,
-        'original-multi-qubit-gate-depth': non_transpiled_multi_qubit_gate_depth,
-        'original-width': non_transpiled_width,
-        'original-total-number-of-operations': non_transpiled_total_number_of_operations,
-        'original-number-of-multi-qubit-gates': non_transpiled_number_of_multi_qubit_gates,
-        'original-number-of-measurement-operations': non_transpiled_number_of_measurement_operations,
-        'original-number-of-single-qubit-gates': non_transpiled_number_of_single_qubit_gates,
+        'original-depth': depth,
+        'original-multi-qubit-gate-depth': multi_qubit_gate_depth,
+        'original-width': width,
+        'original-total-number-of-operations': total_number_of_operations,
+        'original-number-of-multi-qubit-gates': number_of_multi_qubit_gates,
+        'original-number-of-measurement-operations': number_of_measurement_operations,
+        'original-number-of-single-qubit-gates': number_of_single_qubit_gates,
     }
 
 
