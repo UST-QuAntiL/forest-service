@@ -33,6 +33,18 @@ docker-compose pull
 docker-compose up
 ```
 
+
+## Analysis of Original Circuit
+  Request an analysis of the original circuit.
+
+  `POST /forest-service/api/v1.0/analyze-original-circuit`
+  ```
+  {
+      "impl-url": "URL-OF-IMPLEMENTATION",
+      "impl-language": "PyQuil"/"Quil",
+  }
+  ```
+
 ## Transpilation Request
 Send implementation, input, and QPU information to the API to get properties of the transpiled circuit and the transpiled Quil circuit itself.
 *Note*: Currently, only the QVM is used for simulation. Thus, no real backends are accessible.

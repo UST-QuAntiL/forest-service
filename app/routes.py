@@ -29,10 +29,9 @@ import base64
 @app.route('/forest-service/api/v1.0/analyze-original-circuit', methods=['POST'])
 def analyze_original_circuit():
     impl_language = request.json.get('impl-language', '')
-    input_params = request.json.get('input-params', "")
+    input_params = request.json.get('input-params', {'token': ''})
     impl_url = request.json.get('impl-url', "")
     bearer_token = request.json.get("bearer-token", "")
-    input_params = parameters.ParameterDictionary(input_params)
 
     if impl_url is not None and impl_url != "":
         impl_url = request.json['impl-url']
