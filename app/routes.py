@@ -30,36 +30,23 @@ import base64
 import re
 
 
-def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_name: str, qpu_name: str) -> Dict:
-    non_compiled_circuit = circuit
-    nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
-    transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
+multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'
+measurement_operations_regex = 'MEASURE'
 
-    # count number of multi qubit gates
-    program_string = transpiled_circuit.program
-    multi_qubit_gates_regex = '(CZ|XY|CNOT|CCNOT|CPHASE00|CPHASE01|CPHASE10|CPHASE|SWAP|CSWAP|ISWAP|PSWAP)'  # TODO: test if CSWAP gets matched two times (for SWAP and CSWAP)
-    number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
+
+def get_non_transpiled_circuit_metrics(non_compiled_circuit: Program) -> Dict:
     non_compiled_circuit_program_string = str(non_compiled_circuit)
     non_transpiled_number_of_multi_qubit_gates = len(
         [*re.finditer(multi_qubit_gates_regex, non_compiled_circuit_program_string)])
 
-    # count number of measurement operations
-    program_string = transpiled_circuit.program
-    print(transpiled_circuit.program)
-    measurement_operations_regex = 'MEASURE'
-    number_of_measurement_operations = len([*re.finditer(measurement_operations_regex, program_string)])
     non_transpiled_number_of_measurement_operations = len(
         [*re.finditer(
             measurement_operations_regex,
             non_compiled_circuit_program_string)])
 
-    width = len(nq_program.get_qubits())
     non_transpiled_width = len(non_compiled_circuit.get_qubits())
 
-    # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
-    depth = nq_program.native_quil_metadata.gate_depth
-
-    # analyze depth of original circuit #TODO --> multi-qubit gates must be counted right
+    # analyze depth of original circuit TODO --> multi-qubit gates must be counted right
     counts = {}
     for instruction in non_compiled_circuit.instructions[1:]:
         if hasattr(instruction, 'qubits'):
@@ -77,10 +64,7 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
     non_transpiled_depth = counts[max(counts, key=counts.get)]
 
     # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
-    multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
-    # non_transpiled_multi_qubit_gate_depth = #TODO
-
-    total_number_of_gates = nq_program.native_quil_metadata.gate_volume
+    non_transpiled_multi_qubit_gate_depth = 0  # TODO
 
     # total number of gates for non-transpiled circuit
     non_transpiled_total_number_of_gates = 0
@@ -88,15 +72,49 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         if hasattr(instruction, 'qubits'):
             non_transpiled_total_number_of_gates += 1
 
+    non_transpiled_number_of_single_qubit_gates = non_transpiled_total_number_of_gates\
+        - non_transpiled_number_of_multi_qubit_gates
+
+    non_transpiled_total_number_of_operations = non_transpiled_total_number_of_gates \
+        + non_transpiled_number_of_measurement_operations
+
+    return {
+        'original-depth': non_transpiled_depth,
+        'original-width': non_transpiled_width,
+        'original-total-number-of-operations': non_transpiled_total_number_of_operations,
+        'original-number-of-multi-qubit-gates': non_transpiled_number_of_multi_qubit_gates,
+        'original-number-of-measurement-operations': non_transpiled_number_of_measurement_operations,
+        'original-number-of-single-qubit-gates': non_transpiled_number_of_single_qubit_gates,
+    }
+
+
+def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_name: str, qpu_name: str) -> Dict:
+    non_compiled_circuit = circuit
+    nq_program = backend.compiler.quil_to_native_quil(circuit, protoquil=True)
+    transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
+
+    # count number of multi qubit gates
+    program_string = transpiled_circuit.program
+    number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
+
+    # count number of measurement operations
+    program_string = transpiled_circuit.program
+    print(transpiled_circuit.program)
+    number_of_measurement_operations = len([*re.finditer(measurement_operations_regex, program_string)])
+    width = len(nq_program.get_qubits())
+
+    # gate_depth: the longest subsequence of compiled instructions where adjacent instructions share resources
+    depth = nq_program.native_quil_metadata.gate_depth
+
+    # multi_qubit_gate_depth: Maximum number of successive two-qubit gates in the native quil program
+    multi_qubit_gate_depth = nq_program.native_quil_metadata.multiqubit_gate_depth
+    total_number_of_gates = nq_program.native_quil_metadata.gate_volume
+
     # count number of single qubit gates
     number_of_single_qubit_gates = total_number_of_gates - number_of_multi_qubit_gates
-    non_transpiled_number_of_single_qubit_gates = non_transpiled_total_number_of_gates \
-                                                  - non_transpiled_number_of_multi_qubit_gates
 
     # count total number of all operations including gates and measurement operations
     total_number_of_operations = total_number_of_gates + number_of_measurement_operations
-    non_transpiled_total_number_of_operations = non_transpiled_total_number_of_gates \
-                                                + non_transpiled_number_of_measurement_operations
 
     print(nq_program.native_quil_metadata)
 
@@ -110,13 +128,7 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         f"number of measurement operations={number_of_measurement_operations}, "
         f"multi qubit gate depth={multi_qubit_gate_depth}")
 
-    return {
-        'original-depth': non_transpiled_depth,
-        'original-width': non_transpiled_width,
-        'original-total-number-of-operations': non_transpiled_total_number_of_operations,
-        'original-number-of-multi-qubit-gates': non_transpiled_number_of_multi_qubit_gates,
-        'original-number-of-measurement-operations': non_transpiled_number_of_measurement_operations,
-        'original-number-of-single-qubit-gates': non_transpiled_number_of_single_qubit_gates,
+    compiled_metrics = {
         #'original-multi-qubit-gate-depth': non_transpiled_multi_qubit_gate_depth,
         'depth': depth,
         'multi-qubit-gate-depth': multi_qubit_gate_depth,
@@ -127,6 +139,8 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         'number-of-measurement-operations': number_of_measurement_operations,
         'transpiled-quil': transpiled_circuit.program
     }
+
+    return compiled_metrics | get_non_transpiled_circuit_metrics(non_compiled_circuit)
 
 
 @app.route('/forest-service/api/v1.0/transpile', methods=['POST'])
@@ -183,7 +197,7 @@ def transpile_circuit():
         abort(404)
 
     try:
-        metrics = get_circuit_metrics(circuit, backend)
+        metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
 
     except Exception:
         app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
