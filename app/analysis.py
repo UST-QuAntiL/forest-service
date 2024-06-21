@@ -21,7 +21,7 @@ from typing import Dict
 
 from pyquil import Program
 from pyquil.api import QuantumComputer
-from pyquil.device import Qubit
+from pyquil.external.rpcq import Qubit
 from pyquil.quilbase import Measurement, Gate
 
 from app import app

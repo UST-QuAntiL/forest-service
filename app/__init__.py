@@ -23,7 +23,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from redis import Redis
 import rq
-from app import Config
+from app.config import Config
 import logging
 
 app = Flask(__name__)
@@ -32,7 +32,17 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 from app import routes, result_model, errors
+from app.controller import register_blueprints
+from flask_smorest import Api
 
 app.redis = Redis.from_url(app.config['REDIS_URL'], port=5040)
 app.execute_queue = rq.Queue('forest-service_execute', connection=app.redis, default_timeout=3600)
+app.implementation_queue = rq.Queue('forest-service_implementation_exe', connection=app.redis, default_timeout=10000)
 app.logger.setLevel(logging.INFO)
+
+api = Api(app)
+register_blueprints(api)
+
+@app.route("/")
+def heartbeat():
+    return '<h1>forest-service is running</h1> <h3>View the API Docs <a href="/api/swagger-ui">here</a></h3>'

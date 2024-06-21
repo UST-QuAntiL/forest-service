@@ -19,3 +19,4 @@
 
 from app import app, db
 from app.result_model import Result
+from app.generated_circuit_model import Generated_Circuit
