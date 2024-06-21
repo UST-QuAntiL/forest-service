@@ -33,117 +33,13 @@ docker-compose pull
 docker-compose up
 ```
 
+## API Documentation
+The qiskit-service provides a Swagger UI, specifying the request schemas and showcasing exemplary requests for all API endpoints.
+* http://localhost:5014/api/swagger-ui
 
-## Analysis of Original Circuit
-  Request an analysis of the original circuit.
-
-  `POST /forest-service/api/v1.0/analyze-original-circuit`
-  ```
-  {
-      "impl-url": "URL-OF-IMPLEMENTATION",
-      "impl-language": "PyQuil"/"Quil",
-  }
-  ```
-
-## Transpilation Request
-Send implementation, input, and QPU information to the API to get properties of the transpiled circuit and the transpiled Quil circuit itself.
-*Note*: Currently, only the QVM is used for simulation. Thus, no real backends are accessible.
-
-`POST /forest-service/api/v1.0/transpile`  
-
-#### Transpilation via URL
-```
-{  
-    "impl-url": "URL-OF-IMPLEMENTATION",
-    "impl-language": "PyQuil"/"Quil",
-    "qpu-name": "NAME-OF-QPU",
-    "input-params": {
-        "PARAM-NAME-1": {
-            "rawValue": "YOUR-VALUE-1",
-            "type": "Integer"
-        },
-        "PARAM-NAME-2": {
-            "rawValue": "YOUR-VALUE-2",
-            "type": "String"
-        }
-    },
-    "bearer-token": "YOUR-BEARER-TOKEN"
-}
-```
-
-You only need to specify a bearer token if the url is from the PlanQK platform.
-#### Transpilation via data
-```
-{  
-    "impl-data": "BASE64-ENCODED-IMPLEMENTATION",
-    "impl-language": "PyQuil"/"Quil",
-    "qpu-name": "NAME-OF-QPU",
-    "input-params": {
-        "PARAM-NAME-1": {
-            "rawValue": "YOUR-VALUE-1",
-            "type": "Integer"
-        },
-        "PARAM-NAME-2": {
-            "rawValue": "YOUR-VALUE-2",
-            "type": "String"
-        }
-    }
-}
-```
-
-## Execution Request
-Send implementation, input, and QPU information to the API to execute your circuit and get the result.
-*Note*: Currently, only the QVM is used for simulation. Thus, no real backends are accessible.
-
-`POST /forest-service/api/v1.0/execute`  
-#### Execution via URL
-```
-{  
-    "impl-url": "URL-OF-IMPLEMENTATION",
-    "impl-language": "PyQuil"/"Quil",
-    "qpu-name": "NAME-OF-QPU",
-    "input-params": {
-        "PARAM-NAME-1": {
-            "rawValue": "YOUR-VALUE-1",
-            "type": "Integer"
-        },
-        "PARAM-NAME-2": {
-            "rawValue": "YOUR-VALUE-2",
-            "type": "String"
-        }
-    },
-    "bearer-token": "YOUR-BEARER-TOKEN"
-}
-```
-You only need to specify a bearer token if the url is from the PlanQK platform.
-
-#### Execution via data
-```
-{  
-    "impl-data": "BASE64-ENCODED-IMPLEMENTATION",
-    "impl-language": "PyQuil"/"Quil",
-    "qpu-name": "NAME-OF-QPU",
-    "input-params": {
-        "PARAM-NAME-1": {
-            "rawValue": "YOUR-VALUE-1",
-            "type": "Integer"
-        },
-        "PARAM-NAME-2": {
-            "rawValue": "YOUR-VALUE-2",
-            "type": "String"
-        }
-    }
-}
-```
-#### Execution via transpiled Quil String
-```
-{  
-    "transpiled-quil": "TRANSPILED-Quil-STRING",
-    "qpu-name": "NAME-OF-QPU"
-}
-```
-
-Returns a content location for the result. Access it via `GET`.
+The OpenAPI specifications are also statically available:
+[OpenAPI JSON](./docs/openapi.json)  
+[OpenAPI YAML](./docs/openapi.yaml)
 
 ## Sample Implementations for Transpilation and Execution
 Sample implementations can be found [here](https://github.com/UST-QuAntiL/nisq-analyzer-content/tree/master/compiler-selection/Shor).
