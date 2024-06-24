@@ -55,6 +55,7 @@ def execute_job(transpiled_circuit, shots, backend):
     """Generate qObject from transpiled circuit and execute it. Return result."""
 
     stats = backend.run(transpiled_circuit)
+    stats = stats.get_register_map().get("ro")
     print(stats)
     width = stats.shape[-1]
 
