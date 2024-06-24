@@ -134,12 +134,12 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
     transpiled_circuit = backend.compiler.native_quil_to_executable(nq_program)
 
     # count number of multi qubit gates
-    program_string = transpiled_circuit.program
+    program_string = str(transpiled_circuit)
     number_of_multi_qubit_gates = len([*re.finditer(multi_qubit_gates_regex, program_string)])
 
     # count number of measurement operations
-    program_string = transpiled_circuit.program
-    print(transpiled_circuit.program)
+    program_string = str(transpiled_circuit)
+    print(transpiled_circuit)
     number_of_measurement_operations = len([*re.finditer(measurement_operations_regex, program_string)])
     width = len(nq_program.get_qubits())
 
@@ -176,7 +176,7 @@ def get_circuit_metrics(circuit: Program, backend: QuantumComputer, short_impl_n
         'number-of-single-qubit-gates': number_of_single_qubit_gates,
         'number-of-multi-qubit-gates': number_of_multi_qubit_gates,
         'number-of-measurement-operations': number_of_measurement_operations,
-        'transpiled-quil': transpiled_circuit.program
+        'transpiled-quil': str(transpiled_circuit)
     }
 
     circuit_metrics.update(get_non_transpiled_circuit_metrics(non_transpiled_circuit))

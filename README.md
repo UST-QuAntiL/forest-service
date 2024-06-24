@@ -34,7 +34,7 @@ docker-compose up
 ```
 
 ## API Documentation
-The qiskit-service provides a Swagger UI, specifying the request schemas and showcasing exemplary requests for all API endpoints.
+The forest-service provides a Swagger UI, specifying the request schemas and showcasing exemplary requests for all API endpoints.
 * http://localhost:5014/api/swagger-ui
 
 The OpenAPI specifications are also statically available:

@@ -16,6 +16,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ******************************************************************************
+from pyquil import get_qc
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.generated_circuit_model import Generated_Circuit
@@ -64,7 +65,7 @@ def generate_circuit():
     return response
 
 
-@app.route('/qiskit-service/api/v1.0/generated-circuits/<generated_circuit_id>', methods=['GET'])
+@app.route('/forest-service/api/v1.0/generated-circuits/<generated_circuit_id>', methods=['GET'])
 def get_generated_circuit(generated_circuit_id):
     """Return result when it is available."""
     generated_circuit = Generated_Circuit.query.get(generated_circuit_id)
@@ -173,13 +174,8 @@ def transpile_circuit():
     if not backend:
         app.logger.warn(f"{qpu_name} not found.")
         abort(404)
+    metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
 
-    try:
-        metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
-
-    except Exception:
-        app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
-        return jsonify({'error': 'too many qubits required'}), 200
 
     return jsonify(metrics), 200
 
@@ -198,6 +194,7 @@ def execute_circuit():
     input_params = request.json.get('input-params', "")
     input_params = parameters.ParameterDictionary(input_params)
     shots = request.json.get('shots', 1024)
+    correlation_id = request.json.get('correlation-id', None)
     if 'token' in input_params:
         token = input_params['token']
     elif 'token' in request.json:
@@ -205,7 +202,7 @@ def execute_circuit():
     else:
         abort(400)
 
-    job = app.execute_queue.enqueue('app.tasks.execute', impl_url=impl_url, impl_data=impl_data,
+    job = app.execute_queue.enqueue('app.tasks.execute', correlation_id=correlation_id, impl_url=impl_url, impl_data=impl_data,
                                     impl_language=impl_language, transpiled_quil=transpiled_quil, qpu_name=qpu_name,
                                     token=token, input_params=input_params, shots=shots, bearer_token=bearer_token)
     result = Result(id=job.get_id(), backend=qpu_name, shots=shots)
