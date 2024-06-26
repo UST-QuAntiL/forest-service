@@ -1,5 +1,5 @@
 # ******************************************************************************
-#  Copyright (c) 2022 University of Stuttgart
+#  Copyright (c) 2024 University of Stuttgart
 #
 #  See the NOTICE file(s) distributed with this work for additional
 #  information regarding copyright ownership.
@@ -16,7 +16,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ******************************************************************************
-from pyquil import get_qc
 
 from app import app, forest_handler, implementation_handler, db, parameters
 from app.generated_circuit_model import Generated_Circuit

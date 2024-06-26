@@ -47,6 +47,8 @@ from app.controller import register_blueprints
 from flask_smorest import Api
 
 app.app_context().push()
+
+# note if workers have problems starting a task try to set the PATH and the PYTHONPATH env variables
 app.redis = Redis.from_url(app.config['REDIS_URL'], port=5040)
 app.execute_queue = rq.Queue('forest-service_execute', connection=app.redis, default_timeout=3600)
 app.implementation_queue = rq.Queue('forest-service_implementation_exe', connection=app.redis, default_timeout=10000)

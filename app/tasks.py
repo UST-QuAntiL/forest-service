@@ -57,9 +57,9 @@ def generate(impl_url, impl_data, impl_language, input_params, bearer_token):
         metrics = get_non_transpiled_circuit_metrics(generated_circuit_code)
 
         generated_circuit_object = Generated_Circuit.query.get(job.get_id())
-        generated_circuit_object.generated_circuit = generated_circuit_code.program
+        generated_circuit_object.generated_circuit = generated_circuit_code.out()
 
-        generated_circuit_object.original_depth = metrics['depth']
+        generated_circuit_object.original_depth = metrics['original-depth']
         generated_circuit_object.original_width = metrics['original-width']
         generated_circuit_object.original_total_number_of_operations = metrics['original-total-number-of-operations']
         generated_circuit_object.original_number_of_multi_qubit_gates = metrics['original-number-of-multi-qubit-gates']
