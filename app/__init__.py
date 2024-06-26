@@ -42,11 +42,12 @@ db = SQLAlchemy(app, metadata=MetaData(naming_convention=naming_convention))
 
 migrate = Migrate(app, db)
 
-from app import routes, result_model, errors
+from app import routes, result_model, errors, generated_circuit_model
 from app.controller import register_blueprints
 from flask_smorest import Api
 
 app.app_context().push()
+db.create_all()
 
 # note if workers have problems starting a task try to set the PATH and the PYTHONPATH env variables
 app.redis = Redis.from_url(app.config['REDIS_URL'], port=5040)
