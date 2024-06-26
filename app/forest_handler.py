@@ -43,7 +43,7 @@ def get_qpu(token, qpu_name):
 
     # Get Quantum computer as Quantum Virtual Machine
     return get_qc(name=qpu_name,
-                  as_qvm=True, client_configuration=connection, quilc_client=QuilcClient.new_rpcq("tcp://localhost:5017"), qvm_client=QVMClient.new_http("http://localhost:5016"))
+                  as_qvm=True, client_configuration=connection, quilc_client=QuilcClient.new_rpcq(f"tcp://{quilc_hostname}:{quilc_port}"), qvm_client=QVMClient.new_http(f"http://{qvm_hostname}:{qvm_port}"))
 
 
 def delete_token():
