@@ -218,12 +218,6 @@ def execute_circuit():
     return response
 
 
-@app.route('/forest-service/api/v1.0/calculate-calibration-matrix', methods=['POST'])
-def calculate_calibration_matrix():
-    """Put calibration matrix calculation job in queue. Return location of the later result."""
-    pass
-
-
 @app.route('/forest-service/api/v1.0/results/<result_id>', methods=['GET'])
 def get_result(result_id):
     """Return result when it is available."""
