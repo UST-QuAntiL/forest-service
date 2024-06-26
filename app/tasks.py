@@ -133,7 +133,7 @@ def execute(correlation_id, impl_url, impl_data, impl_language, transpiled_quil,
             # prepare input data containing execution results and initial input params for generating the circuit
             generated_circuit = Generated_Circuit.query.get(correlation_id)
             input_params_for_post_processing = json.loads(generated_circuit.input_params)
-            input_params_for_post_processing['counts'] = job_result['counts']
+            input_params_for_post_processing['counts'] = json.loads(result.result)
 
             if impl_url:
                 post_p_result = implementation_handler.prepare_code_from_url(url=impl_url[0],
