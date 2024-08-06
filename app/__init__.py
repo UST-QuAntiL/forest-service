@@ -23,16 +23,41 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from redis import Redis
 import rq
-from app import Config
+from app.config import Config
 import logging
 
 app = Flask(__name__)
 app.config.from_object(Config)
-db = SQLAlchemy(app)
+
+from sqlalchemy import MetaData
+
+naming_convention = {
+    "ix": 'ix_%(column_0_label)s',
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(column_0_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}
+db = SQLAlchemy(app, metadata=MetaData(naming_convention=naming_convention))
+
 migrate = Migrate(app, db)
 
-from app import routes, result_model, errors
+from app import routes, result_model, errors, generated_circuit_model
+from app.controller import register_blueprints
+from flask_smorest import Api
 
+app.app_context().push()
+db.create_all()
+
+# note if workers have problems starting a task try to set the PATH and the PYTHONPATH env variables
 app.redis = Redis.from_url(app.config['REDIS_URL'], port=5040)
 app.execute_queue = rq.Queue('forest-service_execute', connection=app.redis, default_timeout=3600)
+app.implementation_queue = rq.Queue('forest-service_implementation_exe', connection=app.redis, default_timeout=10000)
 app.logger.setLevel(logging.INFO)
+
+api = Api(app)
+register_blueprints(api)
+
+@app.route("/")
+def heartbeat():
+    return '<h1>forest-service is running</h1> <h3>View the API Docs <a href="/api/swagger-ui">here</a></h3>'

@@ -1,5 +1,5 @@
 # ******************************************************************************
-#  Copyright (c) 2022 University of Stuttgart
+#  Copyright (c) 2024 University of Stuttgart
 #
 #  See the NOTICE file(s) distributed with this work for additional
 #  information regarding copyright ownership.
@@ -18,12 +18,69 @@
 # ******************************************************************************
 
 from app import app, forest_handler, implementation_handler, db, parameters
+from app.generated_circuit_model import Generated_Circuit
 from app.result_model import Result
 from app.analysis import get_circuit_metrics, get_non_transpiled_circuit_metrics
 from flask import jsonify, abort, request
 import logging
 import json
 import base64
+
+
+@app.route('/forest-service/api/v1.0/generate-circuit', methods=['POST'])
+def generate_circuit():
+    if not request.json:
+        abort(400)
+
+    impl_language = request.json.get('impl-language', '')
+    impl_url = request.json.get('impl-url', "")
+    input_params = request.json.get('input-params', "")
+    bearer_token = request.json.get("bearer-token", "")
+    impl_data = ''
+    if input_params:
+        input_params = parameters.ParameterDictionary(input_params)
+
+    if impl_url is not None and impl_url != "":
+        impl_url = request.json['impl-url']
+    elif 'impl-data' in request.json:
+        impl_data = base64.b64decode(request.json.get('impl-data').encode()).decode()
+    else:
+        abort(400)
+
+    job = app.implementation_queue.enqueue('app.tasks.generate', impl_url=impl_url, impl_data=impl_data,
+                                           impl_language=impl_language, input_params=input_params,
+                                           bearer_token=bearer_token)
+
+    result = Generated_Circuit(id=job.get_id())
+    db.session.add(result)
+    db.session.commit()
+
+    app.logger.info('Returning HTTP response to client...')
+    content_location = '/forest-service/api/v1.0/generated-circuits/' + result.id
+    response = jsonify({'Location': content_location})
+    response.status_code = 202
+    response.headers['Location'] = content_location
+    response.autocorrect_location_header = True
+    return response
+
+
+@app.route('/forest-service/api/v1.0/generated-circuits/<generated_circuit_id>', methods=['GET'])
+def get_generated_circuit(generated_circuit_id):
+    """Return result when it is available."""
+    generated_circuit = Generated_Circuit.query.get(generated_circuit_id)
+    if generated_circuit.complete:
+        input_params_dict = json.loads(generated_circuit.input_params)
+        return jsonify(
+            {'id': generated_circuit.id, 'complete': generated_circuit.complete, 'input_params': input_params_dict,
+             'generated-circuit': generated_circuit.generated_circuit,
+             'original-depth': generated_circuit.original_depth, 'original-width': generated_circuit.original_width,
+             'original-total-number-of-operations': generated_circuit.original_total_number_of_operations,
+             'original-number-of-multi-qubit-gates': generated_circuit.original_number_of_multi_qubit_gates,
+             'original-number-of-measurement-operations': generated_circuit.original_number_of_measurement_operations,
+             'original-number-of-single-qubit-gates': generated_circuit.original_number_of_single_qubit_gates,
+             'original-multi-qubit-gate-depth': generated_circuit.original_multi_qubit_gate_depth}), 200
+    else:
+        return jsonify({'id': generated_circuit.id, 'complete': generated_circuit.complete}), 200
 
 
 @app.route('/forest-service/api/v1.0/analyze-original-circuit', methods=['POST'])
@@ -116,13 +173,8 @@ def transpile_circuit():
     if not backend:
         app.logger.warn(f"{qpu_name} not found.")
         abort(404)
+    metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
 
-    try:
-        metrics = get_circuit_metrics(circuit, backend, short_impl_name, qpu_name)
-
-    except Exception:
-        app.logger.info(f"Transpile {short_impl_name} for {qpu_name}: too many qubits required")
-        return jsonify({'error': 'too many qubits required'}), 200
 
     return jsonify(metrics), 200
 
@@ -141,6 +193,7 @@ def execute_circuit():
     input_params = request.json.get('input-params', "")
     input_params = parameters.ParameterDictionary(input_params)
     shots = request.json.get('shots', 1024)
+    correlation_id = request.json.get('correlation-id', None)
     if 'token' in input_params:
         token = input_params['token']
     elif 'token' in request.json:
@@ -148,7 +201,7 @@ def execute_circuit():
     else:
         abort(400)
 
-    job = app.execute_queue.enqueue('app.tasks.execute', impl_url=impl_url, impl_data=impl_data,
+    job = app.execute_queue.enqueue('app.tasks.execute', correlation_id=correlation_id, impl_url=impl_url, impl_data=impl_data,
                                     impl_language=impl_language, transpiled_quil=transpiled_quil, qpu_name=qpu_name,
                                     token=token, input_params=input_params, shots=shots, bearer_token=bearer_token)
     result = Result(id=job.get_id(), backend=qpu_name, shots=shots)
@@ -164,20 +217,22 @@ def execute_circuit():
     return response
 
 
-@app.route('/forest-service/api/v1.0/calculate-calibration-matrix', methods=['POST'])
-def calculate_calibration_matrix():
-    """Put calibration matrix calculation job in queue. Return location of the later result."""
-    pass
-
-
 @app.route('/forest-service/api/v1.0/results/<result_id>', methods=['GET'])
 def get_result(result_id):
     """Return result when it is available."""
     result = Result.query.get(result_id)
     if result.complete:
         result_dict = json.loads(result.result)
-        return jsonify({'id': result.id, 'complete': result.complete, 'result': result_dict,
-                        'backend': result.backend, 'shots': result.shots}), 200
+        if result.post_processing_result:
+            post_processing_result_dict = json.loads(result.post_processing_result)
+            return jsonify(
+                {'id': result.id, 'complete': result.complete, 'result': result_dict, 'backend': result.backend,
+                 'shots': result.shots, 'generated-circuit-id': result.generated_circuit_id,
+                 'post-processing-result': post_processing_result_dict}), 200
+        else:
+            return jsonify(
+                {'id': result.id, 'complete': result.complete, 'result': result_dict, 'backend': result.backend,
+                 'shots': result.shots}), 200
     else:
         return jsonify({'id': result.id, 'complete': result.complete}), 200
 

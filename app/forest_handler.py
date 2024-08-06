@@ -1,5 +1,5 @@
 # ******************************************************************************
-#  Copyright (c) 2021 University of Stuttgart
+#  Copyright (c) 2024 University of Stuttgart
 #
 #  See the NOTICE file(s) distributed with this work for additional
 #  information regarding copyright ownership.
@@ -19,9 +19,12 @@
 from time import sleep
 
 from pyquil import get_qc
-from pyquil.api import local_forest_runtime, ForestConnection
+from pyquil.api import QCSClient
 import numpy as np
 import os
+
+from qcs_sdk.compiler.quilc import QuilcClient
+from qcs_sdk.qvm import QVMClient
 
 # Get environment variables
 qvm_hostname = os.environ.get('QVM_HOSTNAME', default='localhost')
@@ -33,15 +36,14 @@ def get_qpu(token, qpu_name):
     """Get backend."""
 
     # Create a connection to the forest SDK
-    connection = ForestConnection(
-        sync_endpoint=f"http://{qvm_hostname}:{qvm_port}",
-        compiler_endpoint=f"tcp://{quilc_hostname}:{quilc_port}")
+    connection = QCSClient(
+        qvm_url=f"http://{qvm_hostname}:{qvm_port}",
+        quilc_url=f"tcp://{quilc_hostname}:{quilc_port}")
+
 
     # Get Quantum computer as Quantum Virtual Machine
     return get_qc(name=qpu_name,
-                  as_qvm=True,
-                  connection=connection)
-
+                  as_qvm=True, client_configuration=connection, quilc_client=QuilcClient.new_rpcq(f"tcp://{quilc_hostname}:{quilc_port}"), qvm_client=QVMClient.new_http(f"http://{qvm_hostname}:{qvm_port}"))
 
 
 def delete_token():
@@ -50,9 +52,11 @@ def delete_token():
 
 
 def execute_job(transpiled_circuit, shots, backend):
-    """Genereate qObject from transpiled circuit and execute it. Return result."""
+    """Generate qObject from transpiled circuit and execute it. Return result."""
 
     stats = backend.run(transpiled_circuit)
+    stats = stats.get_register_map().get("ro")
+    print(stats)
     width = stats.shape[-1]
 
     def binary_string(x):
@@ -60,6 +64,6 @@ def execute_job(transpiled_circuit, shots, backend):
 
 
     unique, counts = np.unique(stats, return_counts=True, axis=0)
-    stats = dict(zip(map(binary_string, unique), map(int,counts)))
+    stats = dict(zip(map(binary_string, unique), map(int, counts)))
     print(stats)
     return stats
